@@ -1,6 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def g_planet(m_p, r):   #returns acceleration due to gravity at a radius and mass of planet
+    G = 6.67430 * 10**-11       #universal constant G
+    return np.array([0,0,G*m_p/(r**2)])     #formula from universal gravitation
+
 def mag(vector):    #magnitude of a vector
     return np.linalg.norm(vector)
 
@@ -13,11 +17,12 @@ def new_v(a, v,dt):       #use kinematics to find new v
 def delta_s(a,v,dt):    #use kinematics to find displacement
     return .5 * a * (dt**2) + v*dt
 
-def s_all(s_0,v_0,m,g,k,total_time,t_0,dt): #create table of all position data given initial conditions and time contraints
+def s_all(s_0,v_0,m,m_p,r_s,k, total_time,t_0,dt): #create table of all position data given initial conditions and time contraints
     t = t_0 #time variable
     v = v_0 #velocity variable
     s = np.array([s_0]) #will store all position data
-    while t < total_time: 
+    while t < total_time:
+        g = g_planet(m_p, r_s + s[-1,2]) #calculating acceleration due to gravity
         a = new_a(m,g,k,v)  #find new acceleration
         s = np.vstack((s,s[-1]+delta_s(a,v,dt)))    #add row with new position data to table
         v = new_v(a, v, dt) #find new v given dt for next operation
@@ -34,9 +39,10 @@ m = 1  #mass of sattelite in kg
 
 
 #test case: earth
-g_earth = np.array([0,0,-9.81]) #g in m/s^2
-k_earth = 0.24 #k coefficient in kg/m
-s_earth = s_all(s_0,v_0,m,g_earth,k_earth,total_time,t_0,dt)
+k_earth = 0.001 #k coefficient in kg/m
+r_earth = 6.3781 *10**6 #radius of earth in m
+m_earth = 5.9722 * 10**24 #mass of earth in kg
+s_earth = s_all(s_0,v_0,m,m_earth,r_earth,k_earth,total_time,t_0,dt)
 print(s_earth)
 
 #test 2d plotting
