@@ -8,6 +8,9 @@ print("importing math...", end='')
 import math
 print("done")
 
+print("importing matplotlib...", end = '')
+import matplotlib.pyplot as plt
+print("done")
 
 
 #Newton's Second Law Suite
@@ -106,7 +109,7 @@ def get_initial_v(s_0, m_s, r_s, h_a, r_b, m_b, dt):
         v_store = np.append(v_store, v[2])
         if v[2] > 10**25:
             break
-    return v
+    return v_store
 
 #Testing Suite
 
@@ -120,7 +123,7 @@ h_a_mars = 230000 #height of atmosphere on mars (m)
 r_b = 1 #radius of ball (m)
 m_b = 1 #mass of ball (kg)
 
-print(get_initial_v(s_0,m_mars,r_mars,h_a_mars,r_b,m_b,dt))
+pltget_initial_v(s_0,m_mars,r_mars,h_a_mars,r_b,m_b,dt)
 
 
 
