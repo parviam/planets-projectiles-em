@@ -77,7 +77,7 @@ def pressure(h):        #calculates pressure at height ONLY MARS
     if h_km > 48:
         return 3.84305 * (158.30/(158.35 - 2.35*(h_km-48)))**(19.435/-2.35)
     if h_km > 39:
-        return 11.6025 * math.exp(-19.435*(h-39)/158.30)
+        return 11.6025 * math.exp(-19.435*(h_km-39)/158.30)
     if h_km > -8:
         return 610.5 * (228.50/(228.50-1.80*h_km))**(-19.435/1.8)
     raise ValueError("height is less than -8!")
@@ -102,32 +102,24 @@ def viscosity(t):      #calculates viscosity of air based on 100% CO2 MARS ONLY
     t_0 = 273 #temperature cosntant, kelvin ratio
     return mu_0*(t/t_0)**(3/2)*((t_0 + s_c)/(t+s_c))    #sutherland's law
         
-def c_d(rho_a,v_mag,r_b,t):    #calculates coefficient of drag using piecewise
+def c_d(rho_a,v_mag,r_b,t, h):    #calculates coefficient of drag using piecewise
     mu = viscosity(t)       #viscosity of air at height
     reynolds = rho_a*v_mag*2*r_b/mu     #reynolds number
-    if reynolds < 0.2:
+    if reynolds < 45:
         return 24/reynolds
-    coefficient = 21.12/reynolds + 6.3/math.sqrt(reynolds) + .25  #temp var for efficiency
-    if reynolds < 2*10**3:
-        return coefficient
-
-    a_waves = v_sound(t)    #velocity of sound at temp
-    mach = v_mag/a_waves    #mach number, below only works for mach < 1
-    if mach < 1:
-        return coefficient*(1-0.445*mach + 4.84*mach**2-9.73*mach**3+6.93*mach**4)/math.sqrt(1+1.2*mach*coefficient)
-    return 0.005
+    if reynolds < 1e5:
+        return 24/reynolds*(1 + 0.15 * reynolds**0.687) + 0.42/(1+(42500/reynolds**1.16))
+    return 0
 
 def drag_a(v, r_b, m_b, h):        #calculates drag acceleration in Newtons
     t = temp(h)     #temperature of air at height
     v_mag = mag(v)  #magnitude of v
     rho_a = rho(h, t)  #density of air
-    a = v_mag**2*math.pi*r_b**2*rho_a*c_d(rho_a,v_mag,r_b,t)/(2*m_b)
+    a = v_mag**2*math.pi*r_b**2*rho_a*c_d(rho_a,v_mag,r_b,t, h)/(2*m_b)
     return -a*v/v_mag        
 
 def accel(m_s, r_s, h, v, r_b, m_b):    #determines acceleration of object
     return g(m_s, r_s, h) + drag_a(v, r_b, m_b, h)     #newton's second law
-
-
 
 
 #Kinematics Suite
@@ -153,7 +145,7 @@ def delta_x(a, v, dt):  #use backwards kinematics to find displacement after som
     return .5 * a * dt**2 - v*dt
 
 def at_ground(s, s_0):     #check if projectile is at ground level
-    return abs(s[2] - s_0[2]) < 1
+    return abs(s[2] - s_0[2]) < 100
 
 def get_initial_v(s_0, m_s, r_s, h_a, r_b, m_b, dt):
     s = final_position(h_a) #current position variable (m)
@@ -167,7 +159,8 @@ def get_initial_v(s_0, m_s, r_s, h_a, r_b, m_b, dt):
         #v_store = np.append(v_store, v[2])
         t_count += dt       #printing feedback system
         if t_count % 10 < dt:
-            print(v[2], "m/s vertical at", s[2], "m above ground at", t_count, "s")
+            print(a, v[2], "m/s vertical at", s[2], "m above ground at", t_count, "s")
+
     return v
 
 #Testing Suite
@@ -182,7 +175,7 @@ h_a_mars = 230000 #height of atmosphere on mars (m)
 r_b = 1 #radius of ball (m)
 m_b = 1 #mass of ball (kg)
 
-print(get_initial_v(s_0,m_mars,r_mars,h_a_mars,r_b,m_b,dt)[2])
+print(mag(get_initial_v(s_0,m_mars,r_mars,h_a_mars,r_b,m_b,dt)))
 
 
 
