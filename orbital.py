@@ -31,7 +31,7 @@ def temp(h):        #calculates temperature  MARS ONLY
     h_km = h/1000 #height in km
     if h_km > 300:
         raise ValueError("height is higher than 3000!")
-    if h_km > 120:
+    if h_km > 115:
         zet = (h_km-120)*(3.38951 + 120)/(3389.51 + h_km)
         return 200 - 72.225 * math.exp(-0.0195 * zet)
     if h_km > 105:
@@ -81,10 +81,14 @@ def pressure(h):        #calculates pressure at height ONLY MARS
     if h_km > -8:
         return 610.5 * (228.50/(228.50-1.80*h_km))**(-19.435/1.8)
     raise ValueError("height is less than -8!")
-def v_sound(t):     #calculates velocity of sound ONLY MARS
+def mach(v_mag, t):     #calculates velocity of sound ONLY MARS
     heat_r = 0.000001409*(t**2) - 0.001192*t + 1.5175       #specific heat ratio
     gas_const = 191.181     #specific gas constant of mars
-    return math.sqrt(heat_r*gas_const*t)
+    v_sound = math.sqrt(heat_r*gas_const*t) #sound speed
+    return v_mag/v_sound
+def knudsen(t, mach, reynolds):
+    heat_r = 0.000001409*(t**2) - 0.001192*t + 1.5175       #specific heat ratio
+    return math.sqrt(math.pi*heat_r/2)*mach/reynolds
 
 def rho(h, t):     #calculates volume density of air MARS ONLY
     h_km = h/1000
@@ -105,10 +109,14 @@ def viscosity(t):      #calculates viscosity of air based on 100% CO2 MARS ONLY
 def c_d(rho_a,v_mag,r_b,t, h):    #calculates coefficient of drag using piecewise
     mu = viscosity(t)       #viscosity of air at height
     reynolds = rho_a*v_mag*2*r_b/mu     #reynolds number
-    if reynolds < 45:
-        return 24/reynolds
-    if reynolds < 1e5:
+    mach_no = mach(v_mag, t)
+    knudsen_no = knudsen(t,mach_no,reynolds)
+    if reynolds < 2e5 and reynolds < 10e6 and knudsen_no < 0.01:
         return 24/reynolds*(1 + 0.15 * reynolds**0.687) + 0.42/(1+(42500/reynolds**1.16))
+    if reynolds > 10e3 and mach_no < 1.5:
+        return 1.65 + 0.65*math.tanh(4*mach_no-3.4)
+    if reynolds > 10e3 and reynolds < 10e6 and mach_no > 1.5:
+        return 2.18 - 0.13*math.tanh(0.9*mach_no-2.7)/100
     return 0
 
 def drag_a(v, r_b, m_b, h):        #calculates drag acceleration in Newtons
@@ -145,7 +153,7 @@ def delta_x(a, v, dt):  #use backwards kinematics to find displacement after som
     return .5 * a * dt**2 - v*dt
 
 def at_ground(s, s_0):     #check if projectile is at ground level
-    return abs(s[2] - s_0[2]) < 100
+    return abs(s[2] - s_0[2]) < 1000
 
 def get_initial_v(s_0, m_s, r_s, h_a, r_b, m_b, dt):
     s = final_position(h_a) #current position variable (m)
@@ -158,9 +166,9 @@ def get_initial_v(s_0, m_s, r_s, h_a, r_b, m_b, dt):
         v = new_v(v, a, dt)     #changes velocity with displacement calculation
         #v_store = np.append(v_store, v[2])
         t_count += dt       #printing feedback system
-        if t_count % 10 < dt:
-            print(a, v[2], "m/s vertical at", s[2], "m above ground at", t_count, "s")
-
+        if t_count % 10 < dt or (t_count % 1 < dt and s[2] < 70000):
+            print(a, v, "m/s vertical at", s[2], "m above ground at", t_count, "s")
+    print(t_count)
     return v
 
 #Testing Suite
@@ -172,10 +180,10 @@ s_0 = np.array([0.,0.,0.]) #initial position (m)
 r_mars = 3389.5 * 10**3 #radius of mars (m)
 m_mars = 6.39 * 10**23 #mass of mars (kg)
 h_a_mars = 230000 #height of atmosphere on mars (m)
-r_b = 1 #radius of ball (m)
-m_b = 1 #mass of ball (kg)
+r_b = 10 #radius of ball (m)
+m_b = 10000 #mass of ball (kg)
 
-print(mag(get_initial_v(s_0,m_mars,r_mars,h_a_mars,r_b,m_b,dt)))
+print(get_initial_v(s_0,m_mars,r_mars,h_a_mars,r_b,m_b,dt))
 
 
 
